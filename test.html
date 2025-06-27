@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini-jeu Anti-Gaspi</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    #game-container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      user-select: none;
+      transition: box-shadow 0.3s ease;
+    }
+
+    #game-container:hover {
+      box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      font-weight: 700;
+      font-size: 1.8rem;
+      margin-bottom: 25px;
+      color: #2c3e50;
+    }
+
+    #food-image {
+      max-width: 100%;
+      max-height: 250px;
+      border-radius: 15px;
+      object-fit: contain;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    #food-image.fade-out {
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    #food-image.fade-in {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 10px 8px;
+      color: #fff;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
+
+    .eat {
+      background-color: #4caf50;
+      box-shadow: 0 6px 15px #4caf50aa;
+    }
+    .eat:hover {
+      background-color: #43a047;
+    }
+
+    .fast {
+      background-color: #ff9800;
+      box-shadow: 0 6px 15px #ff9800aa;
+    }
+    .fast:hover {
+      background-color: #fb8c00;
+    }
+
+    .trash {
+      background-color: #f44336;
+      box-shadow: 0 6px 15px #f44336aa;
+    }
+    .trash:hover {
+      background-color: #e53935;
+    }
+
+    #score-display {
+      margin-top: 30px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #34495e;
+      letter-spacing: 1px;
+    }
+
+    #message {
+      margin-top: 18px;
+      font-style: italic;
+      font-size: 1.1rem;
+      min-height: 30px;
+      color: #555;
+      transition: color 0.3s ease;
+    }
+
+    #message.correct {
+      color: #2e7d32;
+    }
+
+    #message.incorrect {
+      color: #c62828;
+    }
+
+    #restart-btn {
+      margin-top: 25px;
+      display: none;
+      background-color: #2196f3;
+      box-shadow: 0 6px 15px #2196f3aa;
+    }
+
+    #restart-btn:hover {
+      background-color: #1976d2;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container" role="main" aria-label="Jeu Anti-Gaspi">
+    <h1>🎮 Anti-Gaspi : Tri l'Aliment !</h1>
+    <img id="food-image" src="" alt="aliment à trier" aria-live="polite" />
+    <div>
+      <button class="btn eat" aria-label="Choisir à manger" id="btn-eat">À manger</button>
+      <button class="btn fast" aria-label="Choisir à consommer vite" id="btn-fast">À consommer vite</button>
+      <button class="btn trash" aria-label="Choisir à jeter" id="btn-trash">À jeter</button>
+    </div>
+    <div id="score-display" aria-live="polite">Score : 0</div>
+    <div id="message" aria-live="polite"></div>
+    <button id="restart-btn" class="btn" aria-label="Recommencer le jeu">Rejouer</button>
+  </div>
+
+  <script>
+    const aliments = [
+      { img: "https://i.imgur.com/gxP8eXG.png", answer: "eat", text: "Banane bien mûre" },
+      { img: "https://i.imgur.com/nRp6pB7.png", answer: "fast", text: "Yaourt 1 jour après date" },
+      { img: "https://i.imgur.com/94vSTNj.png", answer: "trash", text: "Pomme moisie" },
+      { img: "https://i.imgur.com/VKdHb1J.jpg", answer: "eat", text: "Tomates fraîches" },
+      { img: "https://i.imgur.com/d74U0If.jpg", answer: "fast", text: "Pain rassis" },
+      { img: "https://i.imgur.com/0jdOzTU.png", answer: "trash", text: "Viande avariée" }
+    ];
+
+    const foodImage = document.getElementById("food-image");
+    const messageEl = document.getElementById("message");
+    const scoreDisplay = document.getElementById("score-display");
+    const restartBtn = document.getElementById("restart-btn");
+
+    let index = 0;
+    let score = 0;
+    let isWaiting = false;
+
+    function loadAliment() {
+      if (index >= aliments.length) {
+        foodImage.style.display = "none";
+        messageEl.textContent = `🎉 Bravo ! Ton score final : ${score} / ${aliments.length}`;
+        messageEl.className = "";
+        restartBtn.style.display = "inline-block";
+        return;
+      }
+
+      restartBtn.style.display = "none";
+      messageEl.className = "";
+      messageEl.textContent = aliments[index].text;
+
+      // Effet fade in/out de l'image
+      foodImage.classList.add("fade-out");
+      setTimeout(() => {
+        foodImage.src = aliments[index].img;
+        foodImage.alt = aliments[index].text;
+        foodImage.classList.remove("fade-out");
+        foodImage.classList.add("fade-in");
+        foodImage.style.display = "block";
+        setTimeout(() => {
+          foodImage.classList.remove("fade-in");
+        }, 400);
+      }, 400);
+    }
+
+    function choose(choice) {
+      if (isWaiting) return; // éviter spam
+
+      const correct = aliments[index].answer;
+
+      if (choice === correct) {
+        score++;
+        messageEl.textContent = "✅ Bonne réponse !";
+        messageEl.className = "correct";
+      } else {
+        messageEl.textContent = "❌ Mauvaise réponse.";
+        messageEl.className = "incorrect";
+      }
+
+      scoreDisplay.textContent = `Score : ${score}`;
+      index++;
+      isWaiting = true;
+
+      setTimeout(() => {
+        isWaiting = false;
+        loadAliment();
+      }, 1200);
+    }
+
+    function restartGame() {
+      index = 0;
+      score = 0;
+      scoreDisplay.textContent = `Score : ${score}`;
+      foodImage.style.display = "block";
+      loadAliment();
+    }
+
+    document.getElementById("btn-eat").addEventListener("click", () => choose("eat"));
+    document.getElementById("btn-fast").addEventListener("click", () => choose("fast"));
+    document.getElementById("btn-trash").addEventListener("click", () => choose("trash"));
+    restartBtn.addEventListener("click", restartGame);
+
+    loadAliment();
+  </script>
+</body>
+</html>
